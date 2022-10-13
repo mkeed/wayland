@@ -9,56 +9,7 @@ const stages = [_][]const u8{
     //"staging",
 };
 
-pub fn getFiles(alloc: std.mem.Allocator) !std.ArrayList(std.ArrayList(u8)) {
-    var list = std.ArrayList(std.ArrayList(u8)).init(alloc);
-    errdefer {
-        for (list.items) |li| {
-            li.deinit();
-        }
-    }
-    {
-        var file = try std.fs.cwd().openFile(waylandFile, .{});
-        defer file.close();
-        var fileContents = std.ArrayList(u8).init(alloc);
-        errdefer fileContents.deinit();
-        try file.reader().readAllArrayList(&fileContents, std.math.maxInt(u32));
-        try list.append(fileContents);
-    }
 
-    var protoDir = try std.fs.cwd().openIterableDir(protocolsDir, .{});
-    defer protoDir.close();
-
-    for (stages) |stage| {
-        var stageDir = try protoDir.dir.openIterableDir(stage, .{});
-        defer stageDir.close();
-
-        var iter = stageDir.iterate();
-        while (try iter.next()) |entry| {
-            switch (entry.kind) {
-                .Directory => {},
-                else => continue,
-            }
-            var subStageDir = try stageDir.dir.openIterableDir(entry.name, .{});
-            var substageIter = subStageDir.iterate();
-            while (try substageIter.next()) |xmlentry| {
-                switch (xmlentry.kind) {
-                    .File => {},
-                    else => continue,
-                }
-                if (std.mem.indexOf(u8, xmlentry.name, ".xml") == null) {
-                    continue;
-                }
-                var file = try subStageDir.dir.openFile(xmlentry.name, .{});
-                defer file.close();
-                var fileContents = std.ArrayList(u8).init(alloc);
-                errdefer fileContents.deinit();
-                try file.reader().readAllArrayList(&fileContents, std.math.maxInt(u32));
-                try list.append(fileContents);
-            }
-        }
-    }
-    return list;
-}
 
 pub const Protocol = struct {
     pub const Description = struct {
